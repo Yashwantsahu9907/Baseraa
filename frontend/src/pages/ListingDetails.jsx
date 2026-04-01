@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Phone, MessageCircle, Share2, Heart, CheckCircle, IndianRupee, ShieldCheck, Zap, Utensils, Home, Calendar, Trash2 } from 'lucide-react';
+import { MapPin, Phone, MessageCircle, Share2, Heart, CheckCircle, IndianRupee, ShieldCheck, Zap, Utensils, Home, Calendar, Trash2, AlertTriangle, XCircle, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const ListingDetails = () => {
@@ -13,6 +13,8 @@ const ListingDetails = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [showAllImages, setShowAllImages] = useState(false);
+  const [isFavourite, setIsFavourite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -26,6 +28,15 @@ const ListingDetails = () => {
             const res = await api.get(`/mess/${id}`);
             setListing(res.data);
             setListingType('MessListing');
+        }
+
+        // Check if already in favourites
+        if (user) {
+            try {
+                const profileRes = await api.get('/auth/profile');
+                const favs = profileRes.data.favorites || [];
+                setIsFavourite(favs.some(fid => fid === id || fid.toString() === id));
+            } catch (_) {}
         }
       } catch (error) {
         console.error('Fetch Error:', error);
@@ -63,6 +74,23 @@ const ListingDetails = () => {
           navigate('/student/dashboard');
       } finally {
           setBookingLoading(false);
+      }
+  };
+
+  const handleToggleFavourite = async () => {
+      if (!user) {
+          toast.info('Please login to save listings to your favourites');
+          return navigate('/login');
+      }
+      setFavLoading(true);
+      try {
+          const res = await api.put(`/auth/favorites/${listing._id}`);
+          setIsFavourite(res.data.saved);
+          toast.success(res.data.saved ? '❤️ Saved to Favourites!' : 'Removed from Favourites');
+      } catch (error) {
+          toast.error('Could not update favourites');
+      } finally {
+          setFavLoading(false);
       }
   };
 
@@ -164,57 +192,100 @@ const ListingDetails = () => {
                 <button className="flex-1 md:flex-none flex items-center justify-center bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-50">
                     <Share2 className="w-4 h-4 mr-2" /> Share
                 </button>
-                <button className="flex-1 md:flex-none flex items-center justify-center bg-white border border-red-100 px-4 py-2.5 rounded-xl font-bold text-red-500 hover:bg-red-50">
-                    <Heart className="w-4 h-4 mr-2" /> Save to Favorites
+                <button
+                    onClick={handleToggleFavourite}
+                    disabled={favLoading}
+                    className={`flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 rounded-xl font-bold transition-all ${
+                        isFavourite
+                            ? 'bg-red-50 border border-red-300 text-red-500 hover:bg-red-100'
+                            : 'bg-white border border-red-100 text-red-400 hover:bg-red-50'
+                    } disabled:opacity-60`}
+                >
+                    <Heart className={`w-4 h-4 mr-2 transition-all ${isFavourite ? 'fill-red-500 text-red-500' : ''}`} />
+                    {isFavourite ? 'Saved ✓' : 'Save to Favorites'}
                 </button>
             </div>
         </div>
 
-        {/* 3. Booking Section (Price, Request Button) - PLACED DIRECTLY BELOW ADDRESS */}
-        <div className="glass bg-slate-900 p-8 rounded-3xl shadow-xl mb-12 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
-            {/* Admin Badge/Overlay if user is admin */}
+        {/* 3. Booking Section (Price, Request Button) */}
+        <div className="glass bg-slate-900 p-8 rounded-3xl shadow-xl mb-12 flex flex-col gap-6 relative overflow-hidden">
+            {/* Admin Badge */}
             {user?.role === 'Admin' && (
                 <div className="absolute top-0 right-0 bg-red-600 text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest">
                     ADMIN CONTROL ACTIVE
                 </div>
             )}
 
-            <div className="text-white">
-                <p className="text-slate-400 font-black text-xs uppercase tracking-widest mb-1">Monthly Subscription</p>
-                <div className="flex items-baseline">
-                    <span className="text-5xl font-black tracking-tighter">₹{listing.price || listing.monthlyPlanPrice}</span>
-                    <span className="text-slate-400 font-bold ml-2">/ month</span>
-                </div>
-                <p className="text-[10px] text-primary-300 font-bold uppercase mt-2 italic cursor-help" title="Calculated as Price / 4 for Rooms">
-                   Security Deposit Apply: ₹{listingType === 'RoomListing' ? Math.round((listing.price || 0) / 4) : (listing.monthlyPlanPrice || 0)}
-                </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                <button 
-                    onClick={handleRequestBooking}
-                    disabled={bookingLoading}
-                    className="flex-1 bg-primary-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-primary-500/20 hover:bg-primary-600 transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 flex items-center justify-center whitespace-nowrap"
-                >
-                    {bookingLoading ? (
-                        <div className="animate-spin rounded-full h-6 w-6 border-3 border-white border-t-transparent"></div>
-                    ) : (
-                        <>
-                            <Zap className="w-6 h-6 mr-3 text-yellow-300 fill-yellow-300" />
-                            REQUEST BOOKING
-                        </>
-                    )}
-                </button>
+            {/* Availability Status Banner — only for rooms */}
+            {listingType === 'RoomListing' && (() => {
+                const status = listing.availabilityStatus || 'Available';
+                const available = (listing.totalRooms || 0) - (listing.bookedRooms || 0);
+                const cfg = {
+                    'Available': { icon: CheckCircle, label: 'Rooms Available', cls: 'bg-emerald-500/20 border-emerald-500 text-emerald-300' },
+                    'Limited':   { icon: AlertTriangle, label: 'Limited Rooms Left', cls: 'bg-amber-500/20 border-amber-500 text-amber-300' },
+                    'Full':      { icon: XCircle, label: 'Fully Booked', cls: 'bg-red-500/20 border-red-500 text-red-300' },
+                };
+                const { icon: Icon, label, cls } = cfg[status] || cfg['Available'];
+                return (
+                    <div className={`flex items-center justify-between px-5 py-3 rounded-2xl border ${cls}`}>
+                        <div className="flex items-center gap-3">
+                            <Icon className="w-5 h-5" />
+                            <span className="font-black text-sm uppercase tracking-wider">{label}</span>
+                        </div>
+                        {listing.totalRooms > 0 && (
+                            <span className="text-sm font-bold opacity-80">
+                                {available} of {listing.totalRooms} rooms free
+                            </span>
+                        )}
+                    </div>
+                );
+            })()}
 
-                {user?.role === 'Admin' && (
-                    <button 
-                        onClick={handleAdminDelete}
-                        className="flex-1 bg-red-600/10 border-2 border-red-600 text-red-600 px-6 py-5 rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center whitespace-nowrap"
-                    >
-                        <Trash2 className="w-6 h-6 mr-2" />
-                        DELETE LISTING
-                    </button>
-                )}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div className="text-white">
+                    <p className="text-slate-400 font-black text-xs uppercase tracking-widest mb-1">Monthly Subscription</p>
+                    <div className="flex items-baseline">
+                        <span className="text-5xl font-black tracking-tighter">₹{listing.price || listing.monthlyPlanPrice}</span>
+                        <span className="text-slate-400 font-bold ml-2">/ month</span>
+                    </div>
+                    <p className="text-[10px] text-primary-300 font-bold uppercase mt-2 italic cursor-help" title="Calculated as Price / 4 for Rooms">
+                       Security Deposit Apply: ₹{listingType === 'RoomListing' ? Math.round((listing.price || 0) / 4) : (listing.monthlyPlanPrice || 0)}
+                    </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    {listingType === 'RoomListing' && listing.availabilityStatus === 'Full' ? (
+                        <div className="flex-1 bg-red-900/30 border-2 border-red-600 text-red-300 px-10 py-5 rounded-2xl font-black text-base text-center flex items-center justify-center gap-3">
+                            <XCircle className="w-6 h-6" />
+                            No Rooms Available
+                        </div>
+                    ) : (
+                        <button 
+                            onClick={handleRequestBooking}
+                            disabled={bookingLoading}
+                            className="flex-1 bg-primary-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-primary-500/20 hover:bg-primary-600 transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 flex items-center justify-center whitespace-nowrap"
+                        >
+                            {bookingLoading ? (
+                                <div className="animate-spin rounded-full h-6 w-6 border-3 border-white border-t-transparent"></div>
+                            ) : (
+                                <>
+                                    <Zap className="w-6 h-6 mr-3 text-yellow-300 fill-yellow-300" />
+                                    REQUEST BOOKING
+                                </>
+                            )}
+                        </button>
+                    )}
+
+                    {user?.role === 'Admin' && (
+                        <button 
+                            onClick={handleAdminDelete}
+                            className="flex-1 bg-red-600/10 border-2 border-red-600 text-red-600 px-6 py-5 rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center whitespace-nowrap"
+                        >
+                            <Trash2 className="w-6 h-6 mr-2" />
+                            DELETE LISTING
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
 

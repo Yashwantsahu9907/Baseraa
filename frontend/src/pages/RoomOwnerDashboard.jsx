@@ -90,9 +90,34 @@ const RoomOwnerDashboard = () => {
                             </div>
                             <div className="p-6">
                                 <h4 className="text-lg font-black text-slate-900 truncate">{listing.title}</h4>
-                                <div className="flex items-center text-slate-500 text-sm mt-1 mb-4">
+                                <div className="flex items-center text-slate-500 text-sm mt-1 mb-3">
                                     <MapPin className="w-4 h-4 mr-1 text-slate-400" /> {listing.address}
                                 </div>
+
+                                {/* Occupancy Meter */}
+                                {listing.totalRooms > 0 && (() => {
+                                    const booked = listing.bookedRooms || 0;
+                                    const total = listing.totalRooms;
+                                    const pct = Math.round((booked / total) * 100);
+                                    const status = listing.availabilityStatus || 'Available';
+                                    const barColor = status === 'Full' ? 'bg-red-500' : status === 'Limited' ? 'bg-amber-500' : 'bg-emerald-500';
+                                    const textColor = status === 'Full' ? 'text-red-600' : status === 'Limited' ? 'text-amber-600' : 'text-emerald-600';
+                                    return (
+                                        <div className="mb-3">
+                                            <div className="flex justify-between text-[11px] font-bold mb-1">
+                                                <span className="text-slate-500">Room Occupancy</span>
+                                                <span className={textColor}>{booked}/{total} booked ({pct}%)</span>
+                                            </div>
+                                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${barColor}`}
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                                     <span className="text-xl font-black text-slate-900 font-mono">₹{listing.price}</span>
                                     <div className="flex space-x-2">

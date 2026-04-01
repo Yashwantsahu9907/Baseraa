@@ -6,7 +6,7 @@ const cloudinary = require('../config/cloudinary');
 // @access  Private/RoomOwner
 exports.createRoomListing = async (req, res) => {
     try {
-        const { title, description, price, address, coordinates, roomType, genderPreference, facilities } = req.body;
+        const { title, description, price, address, coordinates, roomType, genderPreference, facilities, totalRooms } = req.body;
         
         let imageUrls = [];
 
@@ -40,6 +40,7 @@ exports.createRoomListing = async (req, res) => {
             location: parseCoords ? { type: 'Point', coordinates: parseCoords } : undefined,
             roomType,
             genderPreference,
+            totalRooms: Number(totalRooms),
             facilities: typeof facilities === 'string' ? JSON.parse(facilities) : facilities,
             images: imageUrls,
             owner: req.user._id

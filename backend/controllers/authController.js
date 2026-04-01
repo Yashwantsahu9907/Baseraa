@@ -69,7 +69,8 @@ exports.loginUser = async (req, res) => {
 // @access  Private
 exports.getUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id)
+            .populate('favorites', 'title address price images availabilityStatus totalRooms bookedRooms roomType genderPreference');
 
         if (user) {
             res.json({
@@ -83,6 +84,36 @@ exports.getUserProfile = async (req, res) => {
         } else {
             res.status(404).json({ message: 'User not found' });
         }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Toggle a listing in user's favourites
+// @route   PUT /api/auth/favorites/:listingId
+// @access  Private
+exports.toggleFavourite = async (req, res) => {
+    try {
+        const listingId = req.params.listingId;
+
+        // Check current state first (only fetch favorites field)
+        const current = await User.findById(req.user._id).select('favorites');
+        if (!current) return res.status(404).json({ message: 'User not found' });
+
+        const alreadySaved = current.favorites.some(id => id.toString() === listingId);
+
+        // Use atomic update operators — avoids triggering the pre-save password hook
+        const updateOp = alreadySaved
+            ? { $pull: { favorites: listingId } }
+            : { $addToSet: { favorites: listingId } };
+
+        const updated = await User.findByIdAndUpdate(
+            req.user._id,
+            updateOp,
+            { new: true, select: 'favorites' }
+        );
+
+        res.json({ favorites: updated.favorites, saved: !alreadySaved });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

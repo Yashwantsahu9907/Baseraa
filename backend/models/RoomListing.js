@@ -19,7 +19,9 @@ const roomListingSchema = new mongoose.Schema({
     // Property Details
     roomType: { type: String, enum: ['Single', 'Double', 'Triple', 'Dormitory', '1BHK', '2BHK', 'PG'], required: true },
     genderPreference: { type: String, enum: ['Boys', 'Girls', 'Any'], required: true },
-    availabilityStatus: { type: String, enum: ['Available', 'Full'], default: 'Available' },
+    availabilityStatus: { type: String, enum: ['Available', 'Limited', 'Full'], default: 'Available' },
+    totalRooms: { type: Number, required: [true, 'Please specify total number of rooms'], min: 1 },
+    bookedRooms: { type: Number, default: 0, min: 0 },
     
     // Arrays
     facilities: [String], // e.g., 'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Washing Machine'

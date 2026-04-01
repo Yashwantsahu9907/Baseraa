@@ -17,6 +17,7 @@ const AddRoom = () => {
     roomType: 'Single',
     genderPreference: 'Any',
     availabilityStatus: 'Available',
+    totalRooms: '',
     facilities: []
   });
 
@@ -181,22 +182,39 @@ const AddRoom = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Gender Preference</label>
-                <div className="flex space-x-4 h-[50px] items-center">
-                  {['Boys', 'Girls', 'Any'].map(g => (
-                    <label key={g} className="flex items-center">
-                      <input
-                        type="radio"
-                        name="genderPreference"
-                        value={g}
-                        checked={formData.genderPreference === g}
-                        onChange={handleChange}
-                        className="text-primary-600 focus:ring-primary-500 h-4 w-4"
-                      />
-                      <span className="ml-2 text-slate-700">{g}</span>
-                    </label>
-                  ))}
-                </div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Total Rooms Available</label>
+                <input
+                  type="number"
+                  name="totalRooms"
+                  required
+                  min="1"
+                  max="200"
+                  value={formData.totalRooms}
+                  onChange={handleChange}
+                  placeholder="e.g. 10"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow bg-white/60 backdrop-blur-sm"
+                />
+                <p className="text-xs text-slate-400 mt-1">Total number of rooms in your property</p>
+              </div>
+            </div>
+
+            {/* Gender Preference */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Gender Preference</label>
+              <div className="flex space-x-4 h-[50px] items-center">
+                {['Boys', 'Girls', 'Any'].map(g => (
+                  <label key={g} className="flex items-center">
+                    <input
+                      type="radio"
+                      name="genderPreference"
+                      value={g}
+                      checked={formData.genderPreference === g}
+                      onChange={handleChange}
+                      className="text-primary-600 focus:ring-primary-500 h-4 w-4"
+                    />
+                    <span className="ml-2 text-slate-700">{g}</span>
+                  </label>
+                ))}
               </div>
             </div>
 

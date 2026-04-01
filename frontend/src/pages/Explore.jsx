@@ -1,8 +1,29 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Search, MapPin, Filter, Map as MapIcon, List, IndianRupee, Trash2 } from 'lucide-react';
+import { Search, MapPin, Filter, Map as MapIcon, List, IndianRupee, Trash2, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import Map from '../components/Map';
+
+const AvailabilityBadge = ({ listing }) => {
+  if (listing.type !== 'room') return null;
+  const status = listing.availabilityStatus || 'Available';
+  const available = (listing.totalRooms || 0) - (listing.bookedRooms || 0);
+  const config = {
+    'Available': { icon: CheckCircle, label: 'Rooms Available', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    'Limited':   { icon: AlertTriangle, label: 'Limited Rooms Left', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    'Full':      { icon: XCircle, label: 'Fully Booked', cls: 'bg-red-50 text-red-700 border-red-200' },
+  };
+  const { icon: Icon, label, cls } = config[status] || config['Available'];
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold ${cls}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>{label}</span>
+      {listing.totalRooms > 0 && (
+        <span className="opacity-60 font-medium ml-1">· {available}/{listing.totalRooms}</span>
+      )}
+    </div>
+  );
+};
 
 const Explore = () => {
   const { api, user } = useContext(AuthContext);
@@ -179,7 +200,11 @@ const Explore = () => {
                    No listings found matching your criteria.
                  </div>
               ) : listings.map((listing) => (
-                <Link key={listing._id} to={`/listing/${listing._id}`} className="group glass rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full bg-white">
+                <Link 
+                key={listing._id} 
+                to={`/listing/${listing._id}`} 
+                className={`group glass rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full bg-white ${listing.availabilityStatus === 'Full' ? 'opacity-70 pointer-events-none' : ''}`}
+              >
                   <div className="relative h-56 w-full bg-slate-200 overflow-hidden">
                     {listing.images && listing.images.length > 0 ? (
                       <img
@@ -193,6 +218,13 @@ const Explore = () => {
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg text-xs font-bold text-slate-800 shadow-sm shadow-black/10">
                       {listing.roomType}
                     </div>
+
+                    {/* Fully Booked overlay */}
+                    {listing.type === 'room' && listing.availabilityStatus === 'Full' && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">Fully Booked</span>
+                      </div>
+                    )}
 
                     {user?.role === 'Admin' && (
                         <button 
@@ -212,9 +244,13 @@ const Explore = () => {
                           {listing.price || listing.monthlyPlanPrice}
                        </div>
                     </div>
-                    <p className="text-sm text-slate-500 flex items-center mb-4 line-clamp-1">
+                    <p className="text-sm text-slate-500 flex items-center mb-3 line-clamp-1">
                       <MapPin className="w-4 h-4 mr-1 flex-shrink-0" /> {listing.address}
                     </p>
+                    {/* Availability Badge */}
+                    <div className="mb-3">
+                      <AvailabilityBadge listing={listing} />
+                    </div>
                     <div className="mt-auto pt-4 border-t border-slate-100 flex flex-wrap gap-2">
                       <div className="flex w-full mb-2">
                         <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded ${listing.type === 'room' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
