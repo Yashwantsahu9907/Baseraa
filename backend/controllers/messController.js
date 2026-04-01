@@ -38,6 +38,7 @@ exports.createMessListing = async (req, res) => {
             foodType,
             mealTimings: typeof mealTimings === 'string' ? JSON.parse(mealTimings) : mealTimings,
             deliveryOptions: deliveryOptions === 'true' || deliveryOptions === true,
+            category: 'mess',
             facilities: typeof facilities === 'string' ? JSON.parse(facilities) : facilities,
             images: imageUrls,
             owner: req.user._id

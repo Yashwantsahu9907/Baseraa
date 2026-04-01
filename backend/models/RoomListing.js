@@ -22,6 +22,7 @@ const roomListingSchema = new mongoose.Schema({
     availabilityStatus: { type: String, enum: ['Available', 'Limited', 'Full'], default: 'Available' },
     totalRooms: { type: Number, required: [true, 'Please specify total number of rooms'], min: 1 },
     bookedRooms: { type: Number, default: 0, min: 0 },
+    category: { type: String, enum: ['room', 'mess'], default: 'room', required: true },
     
     // Arrays
     facilities: [String], // e.g., 'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Washing Machine'

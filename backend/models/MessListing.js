@@ -24,6 +24,7 @@ const messListingSchema = new mongoose.Schema({
         dinner: { start: String, end: String }
     },
     deliveryOptions: { type: Boolean, default: false }, // Delivery available or not
+    category: { type: String, enum: ['room', 'mess'], default: 'mess', required: true },
     
     // Arrays
     facilities: [String], // e.g., 'Dining Hall', 'RO Water', 'Tiffin Service'

@@ -41,6 +41,7 @@ exports.createRoomListing = async (req, res) => {
             roomType,
             genderPreference,
             totalRooms: Number(totalRooms),
+            category: 'room',
             facilities: typeof facilities === 'string' ? JSON.parse(facilities) : facilities,
             images: imageUrls,
             owner: req.user._id

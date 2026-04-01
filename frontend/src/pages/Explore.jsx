@@ -102,17 +102,22 @@ const Explore = () => {
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   
   const [filters, setFilters] = useState({
-    type: 'all', // 'all', 'rooms', 'mess'
+    type: 'room', // 'room' or 'mess'
     query: '',
     minPrice: '',
     maxPrice: '',
     college: ''
   });
 
+  const [selectedCollege, setSelectedCollege] = useState(null);
+  const [selectedListing, setSelectedListing] = useState(null);
+
   const colleges = [
-    { name: 'Delhi University (North Campus)', coords: [77.2100, 28.6890] },
-    { name: 'IIT Delhi', coords: [77.1928, 28.5450] },
-    { name: 'Amity University Noida', coords: [77.3323, 28.5445] }
+    { name: 'Guru Ghasidas Vishwavidyalaya (GGV)', coords: [82.1360, 22.1293] },
+    { name: 'Atal Bihari Vajpayee University', coords: [82.1391, 22.0760] },
+    { name: 'Govt. E. Raghavendra Rao Science College', coords: [82.1364, 22.0815] },
+    { name: 'Chhattisgarh Institute of Medical Sciences (CIMS)', coords: [82.1558, 22.0774] },
+    { name: 'S.L.T. Institute of Pharmaceutical Sciences', coords: [82.1356, 22.1285] }
   ];
 
   useEffect(() => {
@@ -155,7 +160,13 @@ const Explore = () => {
   };
 
   const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFilters({ ...filters, [name]: value });
+    
+    if (name === 'college') {
+      const college = colleges.find(c => c.name === value);
+      setSelectedCollege(college);
+    }
   };
 
   const filteredListings = listings.filter(listing => {
@@ -257,23 +268,20 @@ const Explore = () => {
             <div className="space-y-6">
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-2 block">Property Type</label>
-                <div className="space-y-2">
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
                   {[
-                    { label: 'All', value: 'all' },
-                    { label: 'PG / Rooms', value: 'room' },
-                    { label: 'Mess', value: 'mess' }
+                    { label: 'Rooms', value: 'room', activeClass: 'bg-primary-600 text-white shadow-md' },
+                    { label: 'Mess', value: 'mess', activeClass: 'bg-orange-600 text-white shadow-md' }
                   ].map(item => (
-                    <label key={item.value} className="flex items-center cursor-pointer group">
-                      <input 
-                        type="radio" 
-                        name="type" 
-                        value={item.value}
-                        checked={filters.type === item.value}
-                        onChange={handleFilterChange}
-                        className="text-primary-600 focus:ring-primary-500 h-4 w-4 border-slate-300" 
-                      />
-                      <span className="ml-2 text-sm text-slate-600 group-hover:text-primary-600 transition-colors">{item.label}</span>
-                    </label>
+                    <button 
+                      key={item.value}
+                      onClick={() => setFilters({ ...filters, type: item.value })}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${
+                        filters.type === item.value ? item.activeClass : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -301,9 +309,9 @@ const Explore = () => {
                 </div>
               </div>
 
-              {(filters.query || filters.minPrice || filters.maxPrice || filters.college || filters.type !== 'all') && (
+              {(filters.query || filters.minPrice || filters.maxPrice || filters.college || filters.type !== 'room') && (
                 <button 
-                  onClick={() => setFilters({ type: 'all', query: '', minPrice: '', maxPrice: '', college: '' })}
+                  onClick={() => setFilters({ type: 'room', query: '', minPrice: '', maxPrice: '', college: '' })}
                   className="w-full py-2 text-sm font-medium text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors"
                 >
                   Clear All Filters
@@ -320,60 +328,107 @@ const Explore = () => {
                <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-200 border-t-primary-600"></div>
              </div>
           ) : viewMode === 'list' ? (
-            <div className="space-y-12">
-              {/* Rooms Section */}
-              {(filters.type === 'all' || filters.type === 'room') && (
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="h-8 w-1 bg-primary-600 rounded-full"></div>
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">PGs & Rental Rooms</h2>
-                    <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
-                      {listings.filter(l => l.type === 'room').length} Listings
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredListings.filter(l => l.type === 'room').length === 0 ? (
-                      <div className="col-span-full border-2 border-dashed border-slate-200 rounded-2xl py-12 text-center text-slate-500">
-                        No rooms found matching your criteria.
-                      </div>
-                    ) : (
-                      filteredListings.filter(l => l.type === 'room').map((listing) => (
-                        <ListingCard key={listing._id} listing={listing} user={user} handleAdminDelete={handleAdminDelete} />
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
+            <div className="w-full">
+              {/* Category Selection Tabs (Desktop Tabs) */}
+              <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-slate-200 mb-8 max-w-md">
+                <button 
+                  onClick={() => setFilters({ ...filters, type: 'room' })}
+                  className={`flex-1 flex justify-center items-center py-3 px-6 rounded-xl text-sm font-bold transition-all duration-300 ${filters.type === 'room' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  PGs & Rental Rooms
+                </button>
+                <button 
+                  onClick={() => setFilters({ ...filters, type: 'mess' })}
+                  className={`flex-1 flex justify-center items-center py-3 px-6 rounded-xl text-sm font-bold transition-all duration-300 ${filters.type === 'mess' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  Mess Services
+                </button>
+              </div>
 
-              {/* Mess Section */}
-              {(filters.type === 'all' || filters.type === 'mess') && (
-                <div>
-                  <div className="flex items-center gap-3 mb-6 pt-4">
-                    <div className="h-8 w-1 bg-orange-500 rounded-full"></div>
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Mess & Food Services</h2>
-                    <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
-                      {filteredListings.filter(l => l.type === 'mess').length} Listings
-                    </span>
-                  </div>
+              {/* Listings Content Area */}
+              <div className="space-y-8 animate-fade-in" key={filters.type}>
+                {/* Rooms Section */}
+                {filters.type === 'room' && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="h-8 w-1 bg-primary-600 rounded-full"></div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">Verified Accommodations</h2>
+                      <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+                        {listings.filter(l => l.category === 'room' || l.type === 'room').length} total
+                      </span>
+                    </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredListings.filter(l => l.type === 'mess').length === 0 ? (
-                      <div className="col-span-full border-2 border-dashed border-slate-200 rounded-2xl py-12 text-center text-slate-500">
-                        No mess services found matching your criteria.
-                      </div>
-                    ) : (
-                      filteredListings.filter(l => l.type === 'mess').map((listing) => (
-                        <ListingCard key={listing._id} listing={listing} user={user} handleAdminDelete={handleAdminDelete} />
-                      ))
-                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                      {filteredListings.filter(l => l.category === 'room' || l.type === 'room').length === 0 ? (
+                        <div className="col-span-full border-2 border-dashed border-slate-200 rounded-2xl py-12 text-center text-slate-500">
+                          No rooms found matching your criteria.
+                        </div>
+                      ) : (
+                        filteredListings.filter(l => l.category === 'room' || l.type === 'room').map((listing) => (
+                          <ListingCard key={listing._id} listing={listing} user={user} handleAdminDelete={handleAdminDelete} />
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Mess Section */}
+                {filters.type === 'mess' && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="h-8 w-1 bg-orange-500 rounded-full"></div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">Mess & Tiffin Services</h2>
+                      <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+                        {filteredListings.filter(l => l.category === 'mess' || l.type === 'mess').length} total
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                      {filteredListings.filter(l => l.category === 'mess' || l.type === 'mess').length === 0 ? (
+                        <div className="col-span-full border-2 border-dashed border-slate-200 rounded-2xl py-12 text-center text-slate-500">
+                          No mess services found matching your criteria.
+                        </div>
+                      ) : (
+                        filteredListings.filter(l => l.category === 'mess' || l.type === 'mess').map((listing) => (
+                          <ListingCard key={listing._id} listing={listing} user={user} handleAdminDelete={handleAdminDelete} />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="h-[600px] rounded-2xl overflow-hidden shadow-inner border border-slate-200">
-               <Map listings={filteredListings} />
+            <div className="h-[650px] relative rounded-2xl overflow-hidden shadow-xl border border-slate-200">
+               <Map 
+                  listings={filteredListings} 
+                  colleges={colleges}
+                  selectedCollege={selectedCollege} 
+                  selectedListing={selectedListing}
+                  onSelectListing={setSelectedListing}
+               />
+               
+               {/* Selection Status Overlay (Optional) */}
+               {(selectedCollege || selectedListing) && (
+                 <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur p-4 rounded-xl shadow-lg border border-slate-200 max-w-xs">
+                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Current Selection</h4>
+                   {selectedCollege && (
+                     <div className="mb-2">
+                       <p className="text-[10px] text-slate-400">College</p>
+                       <p className="text-sm font-bold text-slate-800 line-clamp-1">{selectedCollege.name}</p>
+                     </div>
+                   )}
+                   {selectedListing && (
+                     <div>
+                       <p className="text-[10px] text-slate-400">Accommodation</p>
+                       <p className="text-sm font-bold text-primary-600 line-clamp-1">{selectedListing.title || selectedListing.name}</p>
+                     </div>
+                   )}
+                   {(!selectedCollege || !selectedListing) && (
+                     <p className="mt-2 text-[11px] italic text-slate-500">Pick both to see route and distance</p>
+                   )}
+                 </div>
+               )}
             </div>
           )}
         </div>
