@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const RoomListing = require('../models/RoomListing');
 const MessListing = require('../models/MessListing');
+const cloudinary = require('../config/cloudinary');
 
 // Helper: compute availability status from counts
 function computeAvailability(booked, total) {
@@ -16,7 +17,17 @@ function computeAvailability(booked, total) {
 // @access  Private/Student
 exports.requestBooking = async (req, res) => {
     try {
-        const { propertyId, propertyType, amount, startDate } = req.body;
+        const { propertyId, propertyType, amount, startDate, studentName, studentPhone } = req.body;
+
+        // Validation for new fields
+        if (!studentName || !studentPhone) {
+            return res.status(400).json({ message: 'Please provide student name and phone number.' });
+        }
+
+        // Check if Aadhaar card is uploaded
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aadhaar card upload is required for booking.' });
+        }
 
         // Block booking if room is Full
         if (propertyType === 'RoomListing') {
@@ -25,6 +36,13 @@ exports.requestBooking = async (req, res) => {
                 return res.status(400).json({ message: 'This property is fully booked and cannot accept new requests.' });
             }
         }
+
+        // Upload Aadhaar to Cloudinary
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        let dataURI = 'data:' + req.file.mimetype + ';base64,' + b64;
+        const result = await cloudinary.uploader.upload(dataURI, {
+            folder: 'basera/bookings/aadhaar'
+        });
         
         const booking = await Booking.create({
             student: req.user._id,
@@ -32,11 +50,15 @@ exports.requestBooking = async (req, res) => {
             propertyModel: propertyType,
             amount,
             startDate,
+            studentName,
+            studentPhone,
+            aadhaarCard: result.secure_url,
             status: 'Pending'
         });
 
         res.status(201).json(booking);
     } catch (error) {
+        console.error('Booking Request Error:', error);
         res.status(500).json({ message: error.message });
     }
 };

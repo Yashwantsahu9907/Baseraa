@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Plus, Edit2, Trash2, Home as HomeIcon, MapPin, IndianRupee, Bell, CheckCircle, XCircle, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, Home as HomeIcon, MapPin, IndianRupee, Bell, CheckCircle, XCircle, Users, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../services/api';
 
@@ -151,8 +151,9 @@ const RoomOwnerDashboard = () => {
                                     <Users className="w-5 h-5 text-slate-400" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-black text-slate-900">{booking.student?.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{booking.status}</p>
+                                    <p className="text-sm font-black text-slate-900">{booking.studentName || booking.student?.name}</p>
+                                    <p className="text-[10px] text-slate-500 font-bold">{booking.studentPhone || booking.student?.phone || 'No Phone'}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{booking.status}</p>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -161,8 +162,20 @@ const RoomOwnerDashboard = () => {
                             </div>
                         </div>
                         
-                        <div className="p-3 bg-slate-50 rounded-2xl text-[11px] text-slate-600 font-medium mb-4 flex items-center">
-                            <HomeIcon className="w-3 h-3 mr-2" /> Booking for: <span className="font-bold ml-1">{booking.propertyId?.title}</span>
+                        <div className="space-y-2 mb-4">
+                            <div className="p-3 bg-slate-50 rounded-2xl text-[11px] text-slate-600 font-medium flex items-center">
+                                <HomeIcon className="w-3 h-3 mr-2" /> For: <span className="font-bold ml-1">{booking.propertyId?.title}</span>
+                            </div>
+                            {booking.aadhaarCard && (
+                                <a 
+                                    href={booking.aadhaarCard} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="block p-3 bg-primary-50 rounded-2xl text-[11px] text-primary-700 font-bold hover:bg-primary-100 transition-colors flex items-center justify-center border border-primary-100"
+                                >
+                                    <ShieldCheck className="w-3.5 h-3.5 mr-2" /> View Student Aadhaar Card
+                                </a>
+                            )}
                         </div>
 
                         {booking.status === 'Pending' && (

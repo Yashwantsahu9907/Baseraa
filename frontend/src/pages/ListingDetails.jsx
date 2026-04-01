@@ -13,8 +13,15 @@ const ListingDetails = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [showAllImages, setShowAllImages] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
   const [isFavourite, setIsFavourite] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
+  
+  const [bookingForm, setBookingForm] = useState({
+      studentName: '',
+      studentPhone: '',
+      aadhaarCard: null
+  });
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -48,7 +55,8 @@ const ListingDetails = () => {
     if (id) fetchListing();
   }, [id, api]);
 
-  const handleRequestBooking = async () => {
+  const handleRequestBooking = async (e) => {
+      e.preventDefault();
       if (!user) {
           toast.info('Please login as a Student to request a booking');
           return navigate('/login');
@@ -57,21 +65,36 @@ const ListingDetails = () => {
           toast.error('Only students can request bookings');
           return;
       }
+      if (!bookingForm.studentName || !bookingForm.studentPhone || !bookingForm.aadhaarCard) {
+          toast.error('Please fill in all details and upload your Aadhaar card');
+          return;
+      }
 
       setBookingLoading(true);
       try {
           const actualPrice = listing.price || listing.monthlyPlanPrice || 0;
           const deposit = listingType === 'RoomListing' ? Math.round(actualPrice / 4) : actualPrice;
           
-          await api.post('/bookings', {
-              propertyId: listing._id,
-              propertyType: listingType,
-              amount: deposit,
-              startDate: new Date()
+          const formData = new FormData();
+          formData.append('propertyId', listing._id);
+          formData.append('propertyType', listingType);
+          formData.append('amount', deposit);
+          formData.append('startDate', new Date().toISOString());
+          formData.append('studentName', bookingForm.studentName);
+          formData.append('studentPhone', bookingForm.studentPhone);
+          formData.append('aadhaarCard', bookingForm.aadhaarCard);
+
+          await api.post('/bookings', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
           });
           
           toast.success('Your request has been sent! Check your Dashboard for approval.');
+          setShowBookingModal(false);
+          setBookingForm({ studentName: '', studentPhone: '', aadhaarCard: null });
           navigate('/student/dashboard');
+      } catch (error) {
+          console.error('Booking Error:', error);
+          toast.error(error.response?.data?.message || 'Could not complete booking request');
       } finally {
           setBookingLoading(false);
       }
@@ -261,18 +284,11 @@ const ListingDetails = () => {
                         </div>
                     ) : (
                         <button 
-                            onClick={handleRequestBooking}
-                            disabled={bookingLoading}
+                            onClick={() => setShowBookingModal(true)}
                             className="flex-1 bg-primary-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-primary-500/20 hover:bg-primary-600 transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 flex items-center justify-center whitespace-nowrap"
                         >
-                            {bookingLoading ? (
-                                <div className="animate-spin rounded-full h-6 w-6 border-3 border-white border-t-transparent"></div>
-                            ) : (
-                                <>
-                                    <Zap className="w-6 h-6 mr-3 text-yellow-300 fill-yellow-300" />
-                                    REQUEST BOOKING
-                                </>
-                            )}
+                             <Zap className="w-6 h-6 mr-3 text-yellow-300 fill-yellow-300" />
+                             {listingType === 'RoomListing' ? 'RESERVE ROOM' : 'SUBSCRIBE TO MESS'}
                         </button>
                     )}
 
@@ -362,45 +378,93 @@ const ListingDetails = () => {
         </div>
       </div>
 
-      {/* Gallery Modal */}
-      {showAllImages && (
-          <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl animate-fade-in flex flex-col">
-              <div className="p-6 flex justify-between items-center border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-10">
-                  <h3 className="text-white font-black uppercase tracking-widest">
-                    Listing Photos <span className="ml-2 text-slate-400 font-mono">({listing.images.length})</span>
-                  </h3>
-                  <button 
-                    onClick={() => setShowAllImages(false)}
-                    className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all transform hover:rotate-90"
-                  >
-                      <Trash2 className="w-6 h-6 rotate-45" /> {/* Use Trash2 rotated as an 'X' or import X from lucide-react */}
-                  </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-8 scroll-smooth">
-                  <div className="max-w-4xl mx-auto space-y-12">
-                      {listing.images.map((img, index) => (
-                          <div key={index} className="rounded-3xl overflow-hidden shadow-2xl border border-white/5 animate-slide-up group">
-                              <img 
-                                src={img.url} 
-                                className="w-full h-auto object-contain bg-black/20" 
-                                alt={`Gallery ${index}`} 
+      {/* Booking Modal */}
+      {showBookingModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowBookingModal(false)}></div>
+              <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative z-10 overflow-hidden animate-slide-up">
+                  <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+                      <div>
+                          <h3 className="text-xl font-black tracking-tight uppercase">Confirm Your Booking</h3>
+                          <p className="text-slate-400 text-xs font-bold mt-1">Please provide details to proceed</p>
+                      </div>
+                      <button onClick={() => setShowBookingModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                          <XCircle className="w-6 h-6" />
+                      </button>
+                  </div>
+                  
+                  <form onSubmit={handleRequestBooking} className="p-8 space-y-6">
+                      <div className="space-y-4">
+                          <div>
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Full Name</label>
+                              <input 
+                                  required
+                                  type="text" 
+                                  placeholder="As per Government ID" 
+                                  value={bookingForm.studentName}
+                                  onChange={(e) => setBookingForm({...bookingForm, studentName: e.target.value})}
+                                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3.5 focus:border-primary-500 outline-none transition-all font-bold text-slate-900"
                               />
-                              <div className="bg-white/5 p-4 text-white/40 text-[10px] font-black uppercase tracking-[0.2em] flex justify-between items-center group-hover:text-white/60 transition-colors">
-                                  <span>PHOTO {index + 1} OF {listing.images.length}</span>
-                                  <span>BASERA PREMIUM LISTING</span>
+                          </div>
+                          <div>
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Phone Number</label>
+                              <div className="relative">
+                                  <div className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-400">+91</div>
+                                  <input 
+                                      required
+                                      type="tel" 
+                                      placeholder="10-digit mobile number" 
+                                      value={bookingForm.studentPhone}
+                                      onChange={(e) => setBookingForm({...bookingForm, studentPhone: e.target.value})}
+                                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-16 pr-5 py-3.5 focus:border-primary-500 outline-none transition-all font-bold text-slate-900"
+                                  />
                               </div>
                           </div>
-                      ))}
-                  </div>
-              </div>
+                          <div>
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Aadhaar Card Copy</label>
+                              <div className={`relative border-2 border-dashed rounded-2xl p-6 transition-all ${bookingForm.aadhaarCard ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}>
+                                  <input 
+                                      required
+                                      type="file" 
+                                      accept="image/*"
+                                      onChange={(e) => setBookingForm({...bookingForm, aadhaarCard: e.target.files[0]})}
+                                      className="absolute inset-0 opacity-0 cursor-pointer"
+                                  />
+                                  <div className="flex flex-col items-center text-center">
+                                      {bookingForm.aadhaarCard ? (
+                                          <>
+                                              <CheckCircle className="w-10 h-10 text-emerald-500 mb-2" />
+                                              <span className="text-emerald-700 font-bold text-sm">File Selected: {bookingForm.aadhaarCard.name}</span>
+                                          </>
+                                      ) : (
+                                          <>
+                                              <ShieldCheck className="w-10 h-10 text-slate-400 mb-2" />
+                                              <span className="text-slate-500 font-bold text-sm">Tap to Upload Image (JPEG/PNG)</span>
+                                              <span className="text-slate-400 text-[10px] mt-1 font-medium">Safe & Secure verification</span>
+                                          </>
+                                      )}
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
 
-              {/* Bottom Navigation / Close Tap */}
-              <div 
-                onClick={() => setShowAllImages(false)}
-                className="p-4 text-center bg-white/5 text-white/40 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-white/10 hover:text-white transition-all"
-              >
-                  Click anywhere to close or use the 'X' button
+                      <div className="pt-2">
+                          <button 
+                              type="submit"
+                              disabled={bookingLoading}
+                              className="w-full bg-primary-600 text-white rounded-2xl py-4.5 font-black text-lg shadow-xl shadow-primary-500/20 hover:bg-primary-700 hover:-translate-y-0.5 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center"
+                          >
+                              {bookingLoading ? (
+                                  <div className="animate-spin rounded-full h-7 w-7 border-4 border-white/30 border-t-white"></div>
+                              ) : (
+                                  'SEND BOOKING REQUEST'
+                              )}
+                          </button>
+                          <p className="text-center text-[10px] text-slate-400 font-bold uppercase mt-4 tracking-tighter">
+                              By clicking, you agree to our Terms & Conditions
+                          </p>
+                      </div>
+                  </form>
               </div>
           </div>
       )}

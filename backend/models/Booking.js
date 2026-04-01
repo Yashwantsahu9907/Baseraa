@@ -30,6 +30,18 @@ const bookingSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    studentName: {
+        type: String,
+        required: true
+    },
+    studentPhone: {
+        type: String,
+        required: true
+    },
+    aadhaarCard: {
+        type: String,
+        required: true // URL of the uploaded image
+    },
     startDate: {
         type: Date,
         default: Date.now
