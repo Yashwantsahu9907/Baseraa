@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
+import ChatWindow from '../components/ChatWindow';
 import { Outlet } from 'react-router-dom';
 
 const MainLayout = () => {
@@ -9,6 +10,7 @@ const MainLayout = () => {
       <main className="flex-grow pt-16">
         <Outlet />
       </main>
+      <ChatWindow />
       {/* Footer can be added here later */}
     </div>
   );

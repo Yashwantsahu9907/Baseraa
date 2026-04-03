@@ -1,12 +1,16 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Home, User, LogOut } from 'lucide-react';
+import { Menu, X, Home, User, LogOut, MessageCircle } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import { ChatContext } from '../context/ChatContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useContext(AuthContext);
+  const { totalUnread, setIsChatOpen } = useContext(ChatContext);
   const navigate = useNavigate();
+
+  // ... (handleLogout and navLinks unchanged) ...
 
   const handleLogout = () => {
     logout();
@@ -54,6 +58,19 @@ const Navbar = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            {user && (
+              <button 
+                onClick={() => setIsChatOpen(prev => !prev)}
+                className="relative p-2 text-slate-600 hover:text-primary-600 transition-colors"
+              >
+                <MessageCircle className="h-6 w-6" />
+                {totalUnread > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white translate-x-1/4 -translate-y-1/4">
+                    {totalUnread}
+                  </span>
+                )}
+              </button>
+            )}
             {user ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-slate-700 font-medium">

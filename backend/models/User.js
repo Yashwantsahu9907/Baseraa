@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         maxlength: 20
     },
+    profileImage: {
+        type: String,
+        default: ''
+    },
     favorites: [{
         type: mongoose.Schema.ObjectId,
         ref: 'RoomListing' // can also be mixed with MessListing later

@@ -19,6 +19,11 @@ exports.requestBooking = async (req, res) => {
     try {
         const { propertyId, propertyType, amount, startDate, studentName, studentPhone } = req.body;
 
+        // Strict role-based access control
+        if (req.user.role !== 'Student') {
+            return res.status(403).json({ message: 'Only students are allowed to reserve rooms.' });
+        }
+
         // Validation for new fields
         if (!studentName || !studentPhone) {
             return res.status(400).json({ message: 'Please provide student name and phone number.' });

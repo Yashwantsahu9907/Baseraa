@@ -37,6 +37,14 @@ const roomListingSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    averageRating: {
+        type: Number,
+        default: 0
+    },
+    numReviews: {
+        type: Number,
+        default: 0
+    },
     isVerified: { type: Boolean, default: false } // Admin verification
 }, {
     timestamps: true

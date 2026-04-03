@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Phone, MessageCircle, Share2, Heart, CheckCircle, IndianRupee, ShieldCheck, Zap, Utensils, Home, Calendar, Trash2, AlertTriangle, XCircle, Users } from 'lucide-react';
+import { ChatContext } from '../context/ChatContext';
+import { MapPin, Phone, MessageCircle, Share2, Heart, CheckCircle, IndianRupee, ShieldCheck, Zap, Utensils, Home, Calendar, Trash2, AlertTriangle, XCircle, Users, Star } from 'lucide-react';
 import { toast } from 'react-toastify';
+import ReviewSection from '../components/ReviewSection';
 
 const ListingDetails = () => {
   const { id } = useParams();
   const { api, user } = useContext(AuthContext);
+  const { openChat, isChatOpen } = useContext(ChatContext);
   const navigate = useNavigate();
   const [listing, setListing] = useState(null);
   const [listingType, setListingType] = useState(null); 
@@ -18,40 +21,40 @@ const ListingDetails = () => {
   const [favLoading, setFavLoading] = useState(false);
   
   const [bookingForm, setBookingForm] = useState({
-      studentName: '',
-      studentPhone: '',
+      studentName: user?.role === 'Student' ? user.name : '',
+      studentPhone: user?.role === 'Student' ? user.phone || '' : '',
       aadhaarCard: null
   });
 
-  useEffect(() => {
-    const fetchListing = async () => {
-      setLoading(true);
+  const fetchListing = async () => {
+    try {
       try {
-        try {
-            const res = await api.get(`/rooms/${id}`);
-            setListing(res.data);
-            setListingType('RoomListing');
-        } catch (err) {
-            const res = await api.get(`/mess/${id}`);
-            setListing(res.data);
-            setListingType('MessListing');
-        }
-
-        // Check if already in favourites
-        if (user) {
-            try {
-                const profileRes = await api.get('/auth/profile');
-                const favs = profileRes.data.favorites || [];
-                setIsFavourite(favs.some(fid => fid === id || fid.toString() === id));
-            } catch (_) {}
-        }
-      } catch (error) {
-        console.error('Fetch Error:', error);
-        toast.error('Could not load listing details');
-      } finally {
-        setLoading(false);
+          const res = await api.get(`/rooms/${id}`);
+          setListing(res.data);
+          setListingType('RoomListing');
+      } catch (err) {
+          const res = await api.get(`/mess/${id}`);
+          setListing(res.data);
+          setListingType('MessListing');
       }
-    };
+
+      // Check if already in favourites
+      if (user) {
+          try {
+              const profileRes = await api.get('/auth/profile');
+              const favs = profileRes.data.favorites || [];
+              setIsFavourite(favs.some(fid => fid === id || fid.toString() === id));
+          } catch (_) {}
+      }
+    } catch (error) {
+      console.error('Fetch Error:', error);
+      toast.error('Could not load listing details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (id) fetchListing();
   }, [id, api]);
 
@@ -117,6 +120,22 @@ const ListingDetails = () => {
       }
   };
 
+  const handleOpenChat = () => {
+      if (!user) {
+          toast.info('Please login to chat with the owner');
+          return navigate('/login');
+      }
+      if (user.role === 'Admin') {
+          toast.info('Admin chat not yet implemented');
+          return;
+      }
+      if (user._id === listing.owner?._id) {
+          toast.info('You are the owner of this listing');
+          return;
+      }
+      openChat(listing.owner);
+  };
+
   const handleAdminDelete = async () => {
     if (!window.confirm('WARNING: Are you sure you want to PERMANENTLY delete this listing? This will also remove all associated images from Cloudinary. This action cannot be undone.')) return;
     
@@ -144,7 +163,16 @@ const ListingDetails = () => {
         
         {/* Top Header */}
         <div className="mb-6">
-            <h1 className="text-3xl font-black text-slate-900 leading-tight">{listing.title || listing.name}</h1>
+            <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2">{listing.title || listing.name}</h1>
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 shadow-sm">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span className="text-sm font-black text-amber-600">{listing.averageRating?.toFixed(1) || '0.0'}</span>
+                    <span className="text-xs text-slate-400 font-bold ml-1">({listing.numReviews || 0} reviews)</span>
+                </div>
+                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{listingType === 'RoomListing' ? 'Room' : 'Mess'} Listing</span>
+            </div>
         </div>
 
         {/* 1. Main Gallery Section */}
@@ -283,13 +311,20 @@ const ListingDetails = () => {
                             No Rooms Available
                         </div>
                     ) : (
-                        <button 
-                            onClick={() => setShowBookingModal(true)}
-                            className="flex-1 bg-primary-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-primary-500/20 hover:bg-primary-600 transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 flex items-center justify-center whitespace-nowrap"
-                        >
-                             <Zap className="w-6 h-6 mr-3 text-yellow-300 fill-yellow-300" />
-                             {listingType === 'RoomListing' ? 'RESERVE ROOM' : 'SUBSCRIBE TO MESS'}
-                        </button>
+                        (!user || user.role === 'Student') ? (
+                            <button 
+                                onClick={() => setShowBookingModal(true)}
+                                className="flex-1 bg-primary-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-primary-500/20 hover:bg-primary-600 transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 flex items-center justify-center whitespace-nowrap"
+                            >
+                                 <Zap className="w-6 h-6 mr-3 text-yellow-300 fill-yellow-300" />
+                                 {listingType === 'RoomListing' ? 'RESERVE ROOM' : 'SUBSCRIBE TO MESS'}
+                            </button>
+                        ) : (
+                            <div className="flex-1 bg-slate-800/10 border-2 border-slate-300 text-slate-500 px-8 py-5 rounded-2xl font-bold text-center flex items-center justify-center gap-2">
+                                <AlertTriangle className="w-5 h-5" />
+                                <span>Reservations restricted to Students</span>
+                            </div>
+                        )
                     )}
 
                     {user?.role === 'Admin' && (
@@ -366,16 +401,32 @@ const ListingDetails = () => {
                         </div>
                     </div>
                     <div className="space-y-4">
-                        <a href={`tel:${listing.owner?.phone}`} className="flex items-center justify-center w-full py-4 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold shadow-sm hover:bg-slate-50">
+                        <button 
+                            onClick={handleOpenChat}
+                            className="flex items-center justify-center w-full py-4 bg-primary-600 text-white rounded-xl font-bold shadow-lg shadow-primary-100 hover:bg-primary-700 transition-colors"
+                        >
+                            <MessageCircle className="w-5 h-5 mr-3" /> Chat with Owner
+                        </button>
+                        <a href={`tel:${listing.owner?.phone}`} className="flex items-center justify-center w-full py-4 bg-white border border-slate-200 rounded-xl text-slate-700 font-bold shadow-sm hover:bg-slate-50 transition-colors">
                             <Phone className="w-5 h-5 mr-3" /> Call Directly
                         </a>
-                        <a href={`https://wa.me/91${listing.owner?.phone}`} target="_blank" rel="noreferrer" className="flex items-center justify-center w-full py-4 bg-[#25D366] text-white rounded-xl font-bold shadow-lg shadow-green-100 hover:bg-[#1ebd5a]">
+                        <a href={`https://wa.me/91${listing.owner?.phone}`} target="_blank" rel="noreferrer" className="flex items-center justify-center w-full py-4 bg-[#25D366] text-white rounded-xl font-bold shadow-lg shadow-green-100 hover:bg-[#1ebd5a] transition-colors">
                             <MessageCircle className="w-5 h-5 mr-3" /> WhatsApp
                         </a>
                     </div>
                 </div>
             </div>
         </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ReviewSection 
+          listingId={listing._id} 
+          listingType={listingType === 'RoomListing' ? 'room' : 'mess'}
+          initialAverage={listing.averageRating}
+          initialCount={listing.numReviews}
+          onReviewAdded={fetchListing}
+        />
       </div>
 
       {/* Booking Modal */}
@@ -394,6 +445,12 @@ const ListingDetails = () => {
                   </div>
                   
                   <form onSubmit={handleRequestBooking} className="p-8 space-y-6">
+                      {user?.role !== 'Student' && (
+                          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold flex items-center gap-2 mb-4 border border-red-100">
+                              <AlertTriangle className="w-4 h-4" />
+                              Only students can submit this form. Your session is restricted.
+                          </div>
+                      )}
                       <div className="space-y-4">
                           <div>
                               <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Full Name</label>

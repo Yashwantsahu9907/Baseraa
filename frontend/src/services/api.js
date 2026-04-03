@@ -1,8 +1,9 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
+const isLocal = window.location.hostname === 'localhost';
 const api = axios.create({
-    baseURL: 'https://baseraa.onrender.com/api',
+    baseURL: isLocal ? 'http://localhost:5000/api' : 'https://baseraa.onrender.com/api',
 });
 
 // Interceptor to add token to every request
